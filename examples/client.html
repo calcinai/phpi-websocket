@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>WebSocket test</title>
+
+    <style type="text/css">
+
+        dl {
+            width:100%;
+            margin-bottom: 20px;
+        }
+
+        dl dd, dl dt {
+            display: inline-block;
+            width:50%;
+            margin: 0;
+        }
+
+        dl dd {
+            float: left;
+            color: #999;
+        }
+
+        dl dt {
+            float: right;
+        }
+
+        ul {
+            height: 200px;
+            overflow: scroll;
+        }
+
+        ul li span {
+            color: #999;
+        }
+
+        button {
+            width: 49%;
+            height: 30px;
+        }
+
+    </style>
+</head>
+<body>
+
+<h2>PHPi WebSocket</h2>
+
+<dl>
+    <dd>Status:</dd>
+    <dt id="list-status">Disconnected</dt>
+
+    <dd>Time on Pi:</dd>
+    <dt id="list-time">Unknown</dt>
+</dl>
+
+<button onclick="sendMessage('on')">LED On</button>
+<button onclick="sendMessage('off')">LED Off</button>
+
+<ul id="log"></ul>
+
+</body>
+
+<script type="text/javascript">
+
+    var socket = new WebSocket('ws://test:test@raspberrypi.local:8080/phpi'),
+        dl = {
+            status: document.getElementById('list-status'),
+            time: document.getElementById('list-time')
+        },
+        log = document.getElementById('log');
+
+
+    socket.addEventListener('open', function() {
+        dl.status.innerHTML = 'Connected';
+    });
+
+    socket.onerror = function() {
+        dl.status.innerHTML = 'Error';
+    };
+
+    socket.onclose = function() {
+        dl.status.innerHTML = 'Disconnected';
+    };
+
+    socket.onmessage = handleMessage;
+
+
+
+    function sendMessage(command, data){
+        socket.send(JSON.stringify({
+            command: command,
+            data: data
+        }))
+    }
+
+
+    function handleMessage(event){
+        message = JSON.parse(event.data);
+
+        switch(message.command){
+            case 'time':
+                //Serves as a bit of a visual heartbeat
+                dl.time.innerHTML = message.data;
+                break;
+            case 'log':
+                log.innerHTML = '<li><span>'+(new Date()).getTime()+':</span> '+message.data+'</li>' + log.innerHTML;
+
+        }
+    }
+
+</script>
+
+</html>
+
