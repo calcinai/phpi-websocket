@@ -1,113 +1,90 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
-    <title>WebSocket test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Example</title>
 
     <style type="text/css">
 
-        dl {
-            width:100%;
-            margin-bottom: 20px;
-        }
-
-        dl dd, dl dt {
-            display: inline-block;
-            width:50%;
-            margin: 0;
-        }
-
-        dl dd {
-            float: left;
-            color: #999;
-        }
-
-        dl dt {
-            float: right;
-        }
-
-        ul {
-            height: 200px;
-            overflow: scroll;
-        }
-
-        ul li span {
-            color: #999;
-        }
-
-        button {
-            width: 49%;
-            height: 30px;
-        }
 
     </style>
 </head>
 <body>
 
-<h2>PHPi WebSocket</h2>
+    <h2>PHPi WebSocket</h2>
 
-<dl>
-    <dd>Status:</dd>
-    <dt id="list-status">Disconnected</dt>
+    <table>
+        <tr>
+            <td>Status:</td>
+            <td id="list-status"></td>
+        </tr>
+        <tr>
+            <td>Time on Pi:</td>
+            <td id="list-time"></td>
+        </tr>
+    </table>
 
-    <dd>Time on Pi:</dd>
-    <dt id="list-time">Unknown</dt>
-</dl>
 
-<button onclick="sendMessage('on')">LED On</button>
-<button onclick="sendMessage('off')">LED Off</button>
 
-<ul id="log"></ul>
+
 
 </body>
 
 <script type="text/javascript">
 
-    var socket = new WebSocket('ws://test:test@raspberrypi.local:8080/phpi'),
-        dl = {
-            status: document.getElementById('list-status'),
-            time: document.getElementById('list-time')
-        },
-        log = document.getElementById('log');
+
+    /** Credit Ismael Celis - https://gist.github.com/ismasan/299789 **/
+    var ServerEventsDispatcher = function(url){
+        var conn = new WebSocket(url);
+
+        var callbacks = {};
+
+        this.bind = function(event_name, callback){
+            callbacks[event_name] = callbacks[event_name] || [];
+            callbacks[event_name].push(callback);
+            return this;
+        };
+
+        this.send = function(event_name, event_data){
+            var payload = JSON.stringify({event:event_name, data: event_data});
+            conn.send(payload);
+            return this;
+        };
+
+        // dispatch to the right handlers
+        conn.onmessage = function(evt){
+            var json = JSON.parse(evt.data);
+            dispatch(json.event, json.data);
+        };
+
+        conn.onclose = function(){ dispatch('close', null)};
+        conn.onopen = function(){ dispatch('open', null)};
+
+        var dispatch = function(event_name, message){
+            var chain = callbacks[event_name];
+            if(typeof chain == 'undefined') return; // no callbacks for this event
+            for(var i = 0; i < chain.length; i++){
+                chain[i](message)
+            }
+        }
+    };
 
 
-    socket.addEventListener('open', function() {
-        dl.status.innerHTML = 'Connected';
+    var socket = new ServerEventsDispatcher('ws://raspberrypi.local:9999/phpi');
+
+    socket.bind('open', function(){
+        document.getElementById('list-status').innerHTML = 'Connected';
+
+    }).bind('close', function(){
+        document.getElementById('list-status').innerHTML = 'Disconnected';
+        //could do something here like try to reconnect
+
+    }).bind('time', function(message){
+        document.getElementById('list-time').innerHTML = message;
+
     });
 
-    socket.onerror = function() {
-        dl.status.innerHTML = 'Error';
-    };
-
-    socket.onclose = function() {
-        dl.status.innerHTML = 'Disconnected';
-    };
-
-    socket.onmessage = handleMessage;
-
-
-
-    function sendMessage(command, data){
-        socket.send(JSON.stringify({
-            command: command,
-            data: data
-        }))
-    }
-
-
-    function handleMessage(event){
-        message = JSON.parse(event.data);
-
-        switch(message.command){
-            case 'time':
-                //Serves as a bit of a visual heartbeat
-                dl.time.innerHTML = message.data;
-                break;
-            case 'log':
-                log.innerHTML = '<li><span>'+(new Date()).getTime()+':</span> '+message.data+'</li>' + log.innerHTML;
-
-        }
-    }
 
 </script>
 
