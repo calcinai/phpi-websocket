@@ -11,7 +11,7 @@ use Calcinai\PHPi\Board;
 
 //The actual WS construction is a bit messy, but it shows the general idea.
 $loop = \React\EventLoop\Factory::create();
-//$board = \Calcinai\PHPi\Factory::create($loop);
+$board = \Calcinai\PHPi\Factory::create($loop);
 
 $controller = new RatchetEventBridge();
 
@@ -23,6 +23,20 @@ $app->route('/phpi', $controller, ['*']);
 
 $loop->addPeriodicTimer(1, function() use($controller){
     $controller->broadcast('time', date('r'));
+});
+
+$loop->addPeriodicTimer(1, function() use($controller, $board){
+    $headers = $board->getPhysicalPins();
+    foreach($headers as &$header){
+        foreach($header as $pin_number => &$physical_pin){
+            if($physical_pin->gpio_number !== null){
+                $physical_pin->function_name = $board->getPin($physical_pin->gpio_number)->getFunctionName();
+                $physical_pin->level = $board->getPin($physical_pin->gpio_number)->getLevel();
+            }
+        }
+    }
+
+    $controller->broadcast('header.update', $headers);
 });
 
 

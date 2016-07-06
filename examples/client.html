@@ -83,6 +83,9 @@
     }).bind('time', function(message){
         document.getElementById('list-time').innerHTML = message;
 
+    }).bind('header.update', function(message){
+        console.log(message);
+
     });
 
 
