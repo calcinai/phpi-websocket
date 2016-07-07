@@ -7,6 +7,7 @@
 include __DIR__.'/../vendor/autoload.php';
 
 use Calcinai\PHPi\Board;
+use Calcinai\PHPi\Pin\PinFunction;
 use Ratchet\ConnectionInterface;
 
 
@@ -27,6 +28,7 @@ $loop->addPeriodicTimer(1, function() use($controller){
 });
 
 
+//The following are the events triggered by the client:
 //Send the pins and their functions on connect
 $controller->on('client.connect', function(ConnectionInterface $connection) use($controller, $board) {
 
@@ -35,26 +37,57 @@ $controller->on('client.connect', function(ConnectionInterface $connection) use(
     foreach($headers as &$header){
         foreach($header as $pin_number => &$physical_pin){
             if($physical_pin->gpio_number !== null){
-                $physical_pin->function = $board->getPin($physical_pin->gpio_number)->getFunction();
-                $physical_pin->alternate_functions = $board->getPin($physical_pin->gpio_number)->getAltFunctions();
-                $physical_pin->level = $board->getPin($physical_pin->gpio_number)->getLevel();
+                $pin = $board->getPin($physical_pin->gpio_number);
+                $physical_pin->function = $pin->getFunction();
+                $physical_pin->alternate_functions = $pin->getAltFunctions();
+                $physical_pin->level = $pin->getLevel();
             }
         }
     }
 
-    $controller->send($connection, 'headers.initialise', $headers);
+    $controller->send($connection, 'board.headers', $headers);
+    $controller->send($connection, 'board.meta', $board->getMeta());
 });
 
-
+//Function change client -> server
 $controller->on('pin.function', function($data) use($board) {
-    $board->getPin($data['pin'])->setFunction($data['function']);
+    $board->getPin($data['pin'])->setFunction($data['func']);
 });
 
 $controller->on('pin.level', function($data) use($board) {
     $pin = $board->getPin($data['pin']);
+
+    //Just to help out!
+    if($pin->getFunction() !== PinFunction::OUTPUT){
+        $pin->setFunction(PinFunction::OUTPUT);
+    }
+
     $data['level'] ? $pin->high() : $pin->low();
 });
 
 
+
+
+
+
+//Set up the update events server -> client
+//This is a bit of a duplicate of above but it's for clarity as an example.
+$headers = $board->getPhysicalPins();
+foreach($headers as $header) {
+    foreach($header as $pin_number => $physical_pin) {
+        if($physical_pin->gpio_number !== null) {
+            $pin = $board->getPin($physical_pin->gpio_number);
+
+            //Need to add a callback on these pins to the client too for level and function changes.
+            $pin->on(\Calcinai\PHPi\Pin::EVENT_FUNCTION_CHANGE, function($new_function) use($pin, $controller){
+                $controller->broadcast('pin.function', ['pin' => $pin->getPinNumber(), 'func' => $new_function]);
+            });
+
+            $pin->on(\Calcinai\PHPi\Pin::EVENT_LEVEL_CHANGE, function() use($pin, $controller){
+                $controller->broadcast('pin.level', ['pin' => $pin->getPinNumber(), 'level' => $pin->getLevel()]);
+            });
+        }
+    }
+}
 
 $app->run();
