@@ -7,6 +7,7 @@
 include __DIR__.'/../vendor/autoload.php';
 
 use Calcinai\PHPi\Board;
+use Ratchet\ConnectionInterface;
 
 
 //The actual WS construction is a bit messy, but it shows the general idea.
@@ -20,32 +21,39 @@ $app = new Ratchet\App('raspberrypi.local', 9999, '0.0.0.0', $loop);
 $app->route('/phpi', $controller, ['*']);
 
 
-
+//Some sort of visible heartbeat
 $loop->addPeriodicTimer(1, function() use($controller){
     $controller->broadcast('time', date('r'));
 });
 
-$loop->addPeriodicTimer(1, function() use($controller, $board){
+
+//Send the pins and their functions on connect
+$controller->on('client.connect', function(ConnectionInterface $connection) use($controller, $board) {
+
+    //Prepare the pins in a useful format for the client
     $headers = $board->getPhysicalPins();
     foreach($headers as &$header){
         foreach($header as $pin_number => &$physical_pin){
             if($physical_pin->gpio_number !== null){
-                $physical_pin->function_name = $board->getPin($physical_pin->gpio_number)->getFunctionName();
+                $physical_pin->function = $board->getPin($physical_pin->gpio_number)->getFunction();
+                $physical_pin->alternate_functions = $board->getPin($physical_pin->gpio_number)->getAltFunctions();
                 $physical_pin->level = $board->getPin($physical_pin->gpio_number)->getLevel();
             }
         }
     }
 
-    $controller->broadcast('header.update', $headers);
+    $controller->send($connection, 'headers.initialise', $headers);
 });
 
 
-
-$controller->on('led.level', function($level) {
-    echo $level;
+$controller->on('pin.function', function($data) use($board) {
+    $board->getPin($data['pin'])->setFunction($data['function']);
 });
 
-
+$controller->on('pin.level', function($data) use($board) {
+    $pin = $board->getPin($data['pin']);
+    $data['level'] ? $pin->high() : $pin->low();
+});
 
 
 

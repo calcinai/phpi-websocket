@@ -28,7 +28,9 @@ class RatchetEventBridge implements \Ratchet\MessageComponentInterface {
 
         //Do some checking here to check authorization
 
+
         $this->connections->attach($connection);
+        $this->emit('client.connect', [$connection]);
     }
 
     /**
@@ -37,6 +39,7 @@ class RatchetEventBridge implements \Ratchet\MessageComponentInterface {
      * @throws \Exception
      */
     function onClose(\Ratchet\ConnectionInterface $connection) {
+        $this->emit('client.close', [$connection]);
         $this->connections->detach($connection);
     }
 
@@ -48,6 +51,7 @@ class RatchetEventBridge implements \Ratchet\MessageComponentInterface {
      * @throws \Exception
      */
     function onError(\Ratchet\ConnectionInterface $connection, \Exception $e) {
+        $this->emit('client.error', [$connection]);
         $this->connections->detach($connection);
     }
 
@@ -68,7 +72,7 @@ class RatchetEventBridge implements \Ratchet\MessageComponentInterface {
 
     }
 
-    public function send(\Ratchet\ConnectionInterface $to, $event, $data){
+    public function send(\Ratchet\ConnectionInterface $to, $event, $data = null){
         $to->send(json_encode([
             'event' => $event,
             'data' => $data

@@ -6,6 +6,82 @@
     <title>WebSocket Example</title>
 
     <style type="text/css">
+        body {
+            font-family: sans-serif;
+        }
+
+        table {
+            border-spacing: 8px 0;
+        }
+
+        table td {
+            padding: 2px 4px;
+        }
+
+        select {
+            width: 100%;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .odd {
+            text-align: right;
+        }
+
+        .type {
+            text-align: center;
+        }
+
+
+
+        .pin {
+            cursor: pointer;
+        }
+
+        .pin.odd {
+            border-left: 1px solid grey;
+        }
+
+        .pin.even {
+            border-right: 1px solid grey;
+        }
+
+        tr:last-child .pin {
+            border-bottom: 1px solid grey;
+        }
+
+        tr:first-child .pin {
+            border-top: 1px solid grey;
+        }
+
+
+
+        [data-type="3v3"] {
+            background: orange;
+        }
+
+        [data-type="5v"] {
+            background: red;
+        }
+
+        [data-type="gnd"] {
+            background: black;
+            color: white;
+        }
+
+        [data-type="gpio"] {
+            background: lime;
+        }
+
+        [data-level="0"] {
+            color: grey;
+        }
+
+        [data-level="1"] {
+            color: red;
+        }
 
 
     </style>
@@ -14,23 +90,58 @@
 
     <h2>PHPi WebSocket</h2>
 
-    <table>
+    <table class="meta-info">
         <tr>
             <td>Status:</td>
-            <td id="list-status"></td>
+            <td class="status"></td>
         </tr>
         <tr>
             <td>Time on Pi:</td>
-            <td id="list-time"></td>
+            <td class="time"></td>
         </tr>
     </table>
 
 
+    <div class="header-tables"></div>
 
 
-
+    <table class="header-template hide">
+        <thead>
+            <tr>
+                <th>Function</th>
+                <th>Type</th>
+                <th>BCM</th>
+                <th>PHY</th>
+                <th colspan="2" class="name"></th>
+                <th>PHY</th>
+                <th>BCM</th>
+                <th>Type</th>
+                <th>Function</th>
+            </tr>
+        </thead>
+        <tbody class="pins">
+            <tr class="row-template hide">
+                <td class="odd function"></td>
+                <td class="odd type"></td>
+                <td class="odd bcm"></td>
+                <td class="odd physical"></td>
+                <td class="odd pin">●</td>
+                <td class="even pin">●</td>
+                <td class="even physical"></td>
+                <td class="even bcm"></td>
+                <td class="even type"></td>
+                <td class="even function"></td>
+            </tr>
+        </tbody>
+    </table>
+    <select title="" class="alt-function-template hide">
+        <option value="0">input</option>
+        <option value="1">output</option>
+    </select>
 </body>
 
+<!-- This is here only for the jQ compatible selectors and loops to make the example more clear -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.1.6/zepto.min.js"></script>
 <script type="text/javascript">
 
 
@@ -71,22 +182,93 @@
     };
 
 
+    function renderHeaderTables(headers){
+        $.each(headers, function(header_name, pins){
+
+            //Copy the table and remove all classes (header-template and hide) 2 in 1!
+            var $header_table = $('.header-template').clone().removeClass();
+
+            $header_table.find('.name').html(header_name);
+
+            var $row;
+            var selector;
+            $.each(pins, function(pin_number, pin){
+
+                if(pin_number % 2){
+                    selector = '.odd';
+                    $row = $header_table.find('.row-template').clone().removeClass();
+                    $header_table.find('.pins').append($row);
+                } else {
+                    selector = '.even';
+                }
+
+                $row.find(selector).data('bcm', pin.gpio_number);
+                $row.find(selector+'.type').data('type', pin.type).html(pin.type);
+                $row.find(selector+'.bcm').html(pin.gpio_number);
+                $row.find(selector+'.physical').html(pin.physical_number);
+
+                if(pin.alternate_functions){
+                    var $function_select = $('.alt-function-template').clone().removeClass();
+                    $.each(pin.alternate_functions, function(func, alt_code){
+                        $function_select.append($('<option />').val(alt_code).html(func));
+                    });
+                    $row.find(selector+'.function').append($function_select.val(pin.function));
+                }
+
+                $row.find(selector+'.pin').data('level', pin.level);
+            });
+
+            $header_table.find('.row-template').remove();
+            $('.header-tables').append($header_table);
+        });
+    }
+
+
+
     var socket = new ServerEventsDispatcher('ws://raspberrypi.local:9999/phpi');
 
     socket.bind('open', function(){
-        document.getElementById('list-status').innerHTML = 'Connected';
+        $('.meta-info .status').html('Connected');
 
     }).bind('close', function(){
-        document.getElementById('list-status').innerHTML = 'Disconnected';
+        $('.meta-info .status').html('Disconnected');
         //could do something here like try to reconnect
 
     }).bind('time', function(message){
-        document.getElementById('list-time').innerHTML = message;
+        $('.meta-info .time').html(message);
 
-    }).bind('header.update', function(message){
-        console.log(message);
+    }).bind('pin.function', function(){
 
+    }).bind('pin.level', function(){
+
+    }).bind('headers.initialise', renderHeaderTables);
+
+
+
+    $('.header-tables').on('change', '.function select', function(){
+        //Pin function changed.
+        var $select = $(this),
+            pin_number = $select.parent().data('bcm');
+
+        socket.send('pin.function', {
+            pin: pin_number,
+            function: $select.val()
+        })
+
+    }).on('click', '.pin', function(){
+        //Pin function changed.
+        var $pin = $(this);
+
+        if($pin.data('bcm') == undefined){
+            return;
+        }
+
+        socket.send('pin.level', {
+            pin: $pin.data('bcm'),
+            level: !$pin.data('level')
+        })
     });
+
 
 
 </script>
