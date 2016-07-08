@@ -1,3 +1,4 @@
+<!-- Everything here is crammed into one file for simplicity.  Obviously it can be much better organised! -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,42 +13,29 @@
         }
 
         table {
-            border-spacing: 8px 0;
+            border-spacing: 0;
             margin-bottom: 10px;
         }
 
-        table th {
-            padding-bottom:8px;
-        }
+        table th { padding-bottom:8px; }
+        table td { padding: 2px 6px; }
 
-        table td {
-            padding: 2px 4px;
-        }
+        select { width: 100%; }
 
-        select {
-            width: 100%;
-        }
-
-        .hide {
-            display: none;
-        }
-
-        .odd {
-            text-align: right;
-        }
-
-        .type {
-            text-align: center;
-        }
+        .hide { display: none; }
+        .odd { text-align: right; }
+        .type { text-align: center; }
+        .bcm { font-weight: bold; }
 
         .pin {
             cursor: pointer;
+            color:lightgray;
         }
 
         .pin.odd { border-left: 1px solid grey; }
         .pin.even { border-right: 1px solid grey; }
-        tr:last-child .pin { border-bottom: 1px solid grey; }
-        tr:first-child .pin { border-top: 1px solid grey; }
+        .header-tables tr:last-child .pin { border-bottom: 1px solid grey; }
+        .header-tables tr:first-child .pin { border-top: 1px solid grey; }
 
 
         [data-type="3v3"] { background: orange; }
@@ -55,8 +43,8 @@
         [data-type="gnd"] { background: black; color: white; }
         [data-type="gpio"] { background: lime; }
 
-        [data-level="0"] { color: grey; }
-        [data-level="1"] { color: red; }
+        [data-level="0"] { color: black; }
+        [data-level="1"] { color: orange; }
 
 
     </style>
@@ -102,7 +90,7 @@
         <table>
             <tr>
                 <td>Non GPIO</td>
-                <td>●</td>
+                <td class="pin">●</td>
             </tr>
             <tr>
                 <td>Pin High</td>
@@ -119,7 +107,7 @@
     <table class="header-template hide">
         <thead>
             <tr>
-                <th>Func</th>
+                <th>Function</th>
                 <th>Type</th>
                 <th>BCM</th>
                 <th>PHY</th>
@@ -127,7 +115,7 @@
                 <th>PHY</th>
                 <th>BCM</th>
                 <th>Type</th>
-                <th>Func</th>
+                <th>Function</th>
             </tr>
         </thead>
         <tbody class="pins">
@@ -156,7 +144,11 @@
 <script type="text/javascript">
 
 
-    /** Credit Ismael Celis - https://gist.github.com/ismasan/299789 **/
+    /**
+     * Simple WS wrapper to json encode and bind events.
+     *
+     * Credit Ismael Celis - https://gist.github.com/ismasan/299789
+     **/
     var ServerEventsDispatcher = function(url){
         var conn = new WebSocket(url);
 
@@ -193,6 +185,9 @@
     };
 
 
+    /**
+     * Function to do the initial header render.  This doesn't change except css after the initial load.
+     */
     function renderHeaderTables(headers){
         $.each(headers, function(header_name, pins){
 
@@ -236,8 +231,24 @@
 
 
 
-    var socket = new ServerEventsDispatcher('ws://raspberrypi.local:9999/phpi');
+    //This is just to allow the uri to be constructed from the current host.  It can be specified manually if it needs to be.
+    var loc = window.location,
+        ws_uri;
 
+    if (loc.protocol === "https:") {
+        ws_uri = "wss:";
+    } else {
+        ws_uri = "ws:";
+    }
+    ws_uri += "//" + loc.host;
+    ws_uri += loc.pathname + "/phpi";
+
+    var socket = new ServerEventsDispatcher(ws_uri);
+
+
+    /**
+     * Bind events from server to UI
+     */
     socket.bind('open', function(){
         $('.meta-info .status').html('Connected');
 
@@ -266,7 +277,9 @@
     }).bind('board.headers', renderHeaderTables);
 
 
-
+    /**
+     * Bind UI events to server requests
+     */
     $('.header-tables').on('change', '.function select', function(){
         //Pin function changed.
         var $select = $(this),
