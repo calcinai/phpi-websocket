@@ -6,7 +6,7 @@ functions and change pin levels.
 
 ## Instalation
 
-Installation should be done using composer as there are a few dependencies (especially for ratchet).
+Installation should be done using composer as there are a few dependencies (especially for ratchet - sorry about this but they are all just tiny symphony components).
 
 If you don't have composer already:
 
