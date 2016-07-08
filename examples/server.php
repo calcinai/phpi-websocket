@@ -14,7 +14,7 @@ use Ratchet\ConnectionInterface;
 $loop = \React\EventLoop\Factory::create();
 $board = \Calcinai\PHPi\Factory::create($loop);
 
-$http_server = new ForExampleOnlyHTTPServer(__DIR__.'client.html');
+$http_server = new ForExampleOnlyHTTPServer(__DIR__.'/client.html');
 $controller = new RatchetEventBridge();
 
 //This is like a vhost, if it donesn't match the host header you'll get a 404
