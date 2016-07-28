@@ -25,5 +25,6 @@ You can test the server by running
 This will run a simple HTTP & WebSocket server on port 9999.  If the hostname of the pi is not the default (raspberrypi.local), you'll need 
 to set it to something that can be accessed in `server.php`
 
-All going well, you should be able to access the example at http://raspberrypi.local:9999/
+All going well, you should be able to access the example at http://raspberrypi.local:9999/ and see something like this:
 
+![Screenshot](/../screenshots/phpi-websocket-pi3.png/?raw=true)
