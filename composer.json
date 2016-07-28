@@ -2,6 +2,7 @@
   "name": "calcinai/phpi-websocket",
   "description": "Scaffolding for Websocket server using Ratchet & PHPi",
   "type": "application",
+  "keywords": ["raspberry", "pi", "rpi", "gpio", "websocket"]
   "require": {
     "calcinai/phpi": "^0.1.0",
     "cboden/ratchet": "^0.3.5",
