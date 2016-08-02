@@ -16,6 +16,8 @@ Then install
 
 ```$ ./composer.phar create-project calcinai/phpi-websocket```
 
+Alternatively, you can download the current release with all its dependencies from the releases page.
+
 ## Usage
 
 You can test the server by running 
