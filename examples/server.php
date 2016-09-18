@@ -4,6 +4,7 @@
  * @author     Michael Calcinai <michael@calcin.ai>
  */
 
+//TODO make this work from vendor dir
 include __DIR__.'/../vendor/autoload.php';
 
 use Calcinai\PHPi\Board;
