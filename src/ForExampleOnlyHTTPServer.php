@@ -9,6 +9,8 @@ use Ratchet\ConnectionInterface;
  * This class only exists to make the example easy to use.  It needs a lot more thought if/before it's actually used for a project.
  * I'd strongly recommend just using apache or nginx to serve the static content.
  *
+ * You could alternatively use php's built in webserver if you're using a late enough version.
+ *
  */
 class ForExampleOnlyHTTPServer implements \Ratchet\Http\HttpServerInterface {
 
